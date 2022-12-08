@@ -35,6 +35,11 @@ def _filename_to_module_name(name: str) -> str:
         end = -4
     else:
         end = -3
+    # Windows will prefix ".\" when tab-completing in Powershell
+    # UNIX-like could potentially do "./"
+    # The result without stripping it is a module name starting ".."
+    if name.startswith(f".{os.path.sep}"):
+        name = name[2:]
     return name[:end].replace(os.path.sep, ".")
 
 
@@ -320,7 +325,10 @@ class Cli:
     ) -> float:
         def import_all() -> None:
             for module_name in import_module_names:
-                __import__(module_name, level=0)
+                try:
+                    __import__(module_name, level=0)
+                except ModuleNotFoundError as ex:
+                    raise Exception(f"Could not import {module_name}: {str(ex)}") from ex
 
         if profile_threshold_ms is not None:
             from testslide.import_profiler import ImportProfiler
