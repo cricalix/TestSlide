@@ -154,7 +154,6 @@ def _format_args(indent: int, *args: Any, **kwargs: Any) -> str:
 
 
 def _is_coroutine(obj: Any) -> bool:
-
     if [int(re.sub(r"[^0-9]", "", x)) for x in platform.python_version_tuple()] < [
         3,
         11,
@@ -680,7 +679,6 @@ class _CallableMock:
 
 
 class _MockCallableDSL:
-
     CALLABLE_MOCKS: Dict[
         Union[int, Tuple[int, str]], Union[Callable[[Type[object]], Any]]
     ] = {}
@@ -778,8 +776,14 @@ class _MockCallableDSL:
             self.type_validation or self.type_validation is None,
         )
 
-        restore = self._method in self._target.__dict__
-        restore_value = self._target.__dict__.get(self._method, None)
+        if isinstance(self._target, (Mock, StrictMock)) or not hasattr(
+            self._target, "__slots__"
+        ):
+            restore = self._method in self._target.__dict__
+            restore_value = self._target.__dict__.get(self._method, None)
+        else:
+            restore = self._method in self._target.__slots__
+            restore_value = getattr(self._target, self._method)
 
         if inspect.isclass(self._target):
             new_value = staticmethod(new_value)  # type: ignore
@@ -1166,7 +1170,6 @@ class _MockCallableDSL:
 
 
 class _MockAsyncCallableDSL(_MockCallableDSL):
-
     _NAME: str = "mock_async_callable"
 
     def __init__(
